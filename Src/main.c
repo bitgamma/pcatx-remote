@@ -80,7 +80,7 @@ static void MX_TIM1_Init(void) {
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = (uint16_t) (HAL_RCC_GetPCLK1Freq() / 1000000) - 1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 0xfff;
+  htim1.Init.Period = 0xffff;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -129,15 +129,10 @@ static void MX_TIM1_Init(void) {
 static void MX_TIM14_Init(void) {
   TIM_OC_InitTypeDef sConfigOC = {0};
 
-  uint32_t periodCycles = HAL_RCC_GetPCLK1Freq() / 5;
-  uint16_t prescaler = (uint16_t)(periodCycles / 0xffff + 1);
-  uint16_t overflow = (uint16_t)((periodCycles + (prescaler / 2)) / prescaler);
-  uint16_t duty = (uint16_t)(overflow * 25 / 100);
-
   htim14.Instance = TIM14;
-  htim14.Init.Prescaler = prescaler;
+  htim14.Init.Prescaler = (uint16_t) (HAL_RCC_GetPCLK1Freq() / 1000000) - 1;
   htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim14.Init.Period = overflow;
+  htim14.Init.Period = 13500;
   htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim14) != HAL_OK)  {
@@ -149,7 +144,7 @@ static void MX_TIM14_Init(void) {
   }
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = duty;
+  sConfigOC.Pulse = 9000;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim14, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
@@ -158,9 +153,9 @@ static void MX_TIM14_Init(void) {
 
   HAL_TIM_MspPostInit(&htim14);
 
-  if (HAL_TIM_PWM_Start_IT(&htim14, TIM_CHANNEL_1) != HAL_OK) {
+  /*if (HAL_TIM_PWM_Start_IT(&htim14, TIM_CHANNEL_1) != HAL_OK) {
     Error_Handler();
-  }
+  }*/
 }
 
 static void MX_GPIO_Init(void) {
