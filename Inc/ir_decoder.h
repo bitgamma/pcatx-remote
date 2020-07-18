@@ -43,6 +43,7 @@ typedef struct {
 typedef enum {
   IR_CMD_DONE,
   IR_CMD_RUNNING,
+  IR_CMD_REPEAT,
   IR_CMD_NEW
 } IRCommandStatus;
 
@@ -54,6 +55,8 @@ typedef struct {
 
 void IR_Reset(IRContext *ctx);
 void IR_Process_Sample(IRContext *ctx);
+
+uint8_t IR_NEC_Decode(uint32_t command, uint8_t *addr, uint8_t *cmd);
 
 #ifdef __cplusplus
 }

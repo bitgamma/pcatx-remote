@@ -29,8 +29,8 @@ void IR_Process_Sample(IRContext *ctx) {
   if (IR_Is_Repeat(&ctx->sample)) {
     ctx->code.bitsLeft = 0;
 
-    if (ctx->command.status != IR_CMD_DONE) {
-      ctx->command.status = IR_CMD_NEW;
+    if (ctx->command.status == IR_CMD_RUNNING) {
+      ctx->command.status = IR_CMD_REPEAT;
     }
   } if (IR_Is_Start(&ctx->sample)) {
     ctx->code.bitsLeft = IR_CODE_BIT_LENGTH;
@@ -48,6 +48,13 @@ void IR_Process_Sample(IRContext *ctx) {
   }
 
   ctx->sample.fresh = 0;
+}
+
+uint8_t IR_NEC_Decode(uint32_t command, uint8_t *addr, uint8_t *cmd) {
+  *cmd = (command >> 16) & 0xff;
+  *addr = command & 0xff;
+
+  return (*cmd == (~(command >> 24) & 0xff)) && (*addr == (~(command >> 8) & 0xff));
 }
 
 inline uint8_t IR_Is_Repeat(IRSample *sample) {

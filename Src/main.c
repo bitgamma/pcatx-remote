@@ -30,9 +30,22 @@ int main(void) {
   }
 }
 
-void ProcessCommand(IRCommand *cmd) {
-  if (cmd->status != IR_CMD_NEW) return;
-  cmd->status = IR_CMD_RUNNING;
+#define EPSON 0xC03F5583
+#define MIDEA 0xFC03FE01
+#define DEXP 0xE11E7F80
+
+void ProcessCommand(IRCommand *command) {
+  if (command->command == EPSON || command->command == MIDEA || command->command == DEXP) {
+    if (command->status == IR_CMD_NEW) {
+      HAL_TIM_PWM_Start_IT(&htim14, TIM_CHANNEL_1);
+    } else if (command->status == IR_CMD_REPEAT) {
+      __HAL_TIM_SET_COUNTER(&htim14, 0);
+    }
+
+    command->status = IR_CMD_RUNNING;
+  } else {
+    command->status = IR_CMD_DONE;
+  }
 }
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
@@ -42,6 +55,11 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
   } else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
     irContext.sample.impulseOnTime = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
   }
+}
+
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
+  HAL_TIM_PWM_Stop_IT(&htim14, TIM_CHANNEL_1);
+  irContext.command.status = IR_CMD_DONE;
 }
 
 static void Sleep(void) {
@@ -130,9 +148,9 @@ static void MX_TIM14_Init(void) {
   TIM_OC_InitTypeDef sConfigOC = {0};
 
   htim14.Instance = TIM14;
-  htim14.Init.Prescaler = (uint16_t) (HAL_RCC_GetPCLK1Freq() / 1000000) - 1;
+  htim14.Init.Prescaler = (uint16_t) (HAL_RCC_GetPCLK1Freq() / 1000) - 1;
   htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim14.Init.Period = 13500;
+  htim14.Init.Period = 350;
   htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim14) != HAL_OK)  {
@@ -144,7 +162,7 @@ static void MX_TIM14_Init(void) {
   }
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 9000;
+  sConfigOC.Pulse = 350;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim14, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
@@ -152,10 +170,6 @@ static void MX_TIM14_Init(void) {
   }
 
   HAL_TIM_MspPostInit(&htim14);
-
-  /*if (HAL_TIM_PWM_Start_IT(&htim14, TIM_CHANNEL_1) != HAL_OK) {
-    Error_Handler();
-  }*/
 }
 
 static void MX_GPIO_Init(void) {
