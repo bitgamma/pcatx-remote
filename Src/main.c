@@ -1,13 +1,15 @@
 #include "main.h"
+#include "ir_decoder.h"
+
 TIM_HandleTypeDef htim3;
 
-uint32_t pwmCycle;
-uint32_t pwmDutyCycle;
+IRContext irContext;
 
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM3_Init(void);
 static void Sleep(void);
+static void ProcessCommand(IRCommand *cmd);
 
 int main(void) {
   HAL_Init();
@@ -16,18 +18,26 @@ int main(void) {
   MX_GPIO_Init();
   MX_TIM3_Init();
 
-	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_2);
+  IR_Reset(&irContext);
+
   while (1)  {
     Sleep();
+    IR_Process_Sample(&irContext);
+    ProcessCommand(&irContext.command);
   }
+}
+
+void ProcessCommand(IRCommand *cmd) {
+  if (cmd->status != IR_CMD_NEW) return;
+  cmd->status = IR_CMD_RUNNING;
 }
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
   if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-    pwmCycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    irContext.sample.impulseDuration = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    irContext.sample.fresh = 1;
   } else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
-    pwmDutyCycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+    irContext.sample.impulseOnTime = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
   }
 }
 
@@ -60,25 +70,17 @@ void SystemClock_Config(void) {
 }
 
 static void MX_TIM3_Init(void) {
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_IC_InitTypeDef sConfigIC = {0};
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = (uint16_t) (HAL_RCC_GetPCLK1Freq() / 1000000) - 1;;
+  htim3.Init.Prescaler = (uint16_t) (HAL_RCC_GetPCLK1Freq() / 1000000) - 1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0xffff;
+  htim3.Init.Period = 0xffff - 1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-    Error_Handler();
-  }
-
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-    Error_Handler();
-  }
+  htim3.Init.RepetitionCounter = TIM_OPMODE_REPETITIVE;
 
   if (HAL_TIM_IC_Init(&htim3) != HAL_OK) {
     Error_Handler();
@@ -86,7 +88,7 @@ static void MX_TIM3_Init(void) {
 
   sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
   sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+  sSlaveConfig.TriggerPolarity = TIM_TRIGGERPOLARITY_FALLING;
   sSlaveConfig.TriggerFilter = 0;
   if (HAL_TIM_SlaveConfigSynchro(&htim3, &sSlaveConfig) != HAL_OK) {
     Error_Handler();
@@ -98,17 +100,25 @@ static void MX_TIM3_Init(void) {
     Error_Handler();
   }
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPolarity = TIM_ICPOLARITY_RISING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
+  if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_2) != HAL_OK) {
+    Error_Handler();
+  }
+
+  sConfigIC.ICPolarity = TIM_ICPOLARITY_FALLING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK) {
     Error_Handler();
   }
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
-  if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_2) != HAL_OK) {
+  if (HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1) != HAL_OK) {
+    Error_Handler();
+  }
+
+	if (HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_2) != HAL_OK) {
     Error_Handler();
   }
 }
