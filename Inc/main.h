@@ -7,6 +7,7 @@ extern "C" {
 
 #include "stm32f0xx_hal.h"
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 #define PWR_BTN_Pin GPIO_PIN_4
