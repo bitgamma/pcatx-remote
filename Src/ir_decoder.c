@@ -51,17 +51,17 @@ void IR_Process_Sample(IRContext *ctx) {
 }
 
 inline uint8_t IR_Is_Repeat(IRSample *sample) {
-  return IR_IS_PATTERN(sample, IR_REPEAT_DURATION_US, IR_HEADER_ON_US);
+  return IR_IS_PATTERN(sample, IR_REPEAT_DURATION_US, IR_REPEAT_ON_US);
 }
 
 inline uint8_t IR_Is_Start(IRSample *sample) {
-  return IR_IS_PATTERN(sample, IR_START_DURATION_US, IR_HEADER_ON_US);
+  return IR_IS_PATTERN(sample, IR_START_DURATION_US, IR_START_ON_US);
 }
 
 uint8_t IR_ReadBit(IRSample *sample, uint32_t* out) {
-  if (IR_IS_PATTERN(sample, IR_ZERO_DURATION_US, IR_BIT_ON_US)) {
+  if (IR_IS_PATTERN(sample, IR_ZERO_DURATION_US, IR_BIT_ZERO_ON_US)) {
     *out = IR_ZERO_BIT;
-  } else if (IR_IS_PATTERN(sample, IR_ONE_DURATION_US, IR_BIT_ON_US)) {
+  } else if (IR_IS_PATTERN(sample, IR_ONE_DURATION_US, IR_BIT_ONE_ON_US)) {
     *out = IR_ONE_BIT;
   } else {
     return 0;

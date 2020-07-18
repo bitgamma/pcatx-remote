@@ -10,15 +10,19 @@ extern "C" {
 #define IR_CODE_BIT_LENGTH 32;
 #define IR_CODE_LSB_FIRST 1
 
-#define IR_TOLERANCE_US 50
+#define IR_TOLERANCE_US 300
+
+#define IR_START_DURATION_US 13500
+#define IR_START_ON_US 9000
 
 #define IR_REPEAT_DURATION_US 11250
-#define IR_START_DURATION_US 13500
-#define IR_ONE_DURATION_US 2250
-#define IR_ZERO_DURATION_US 1125
+#define IR_REPEAT_ON_US 9000
 
-#define IR_HEADER_ON_US 9000
-#define IR_BIT_ON_US 560
+#define IR_ONE_DURATION_US 2250
+#define IR_BIT_ONE_ON_US 560
+
+#define IR_ZERO_DURATION_US 1125
+#define IR_BIT_ZERO_ON_US 560
 
 typedef struct {
   uint32_t impulseDuration;
